@@ -5,6 +5,7 @@
 #include <sstream>
 #include <fstream>
 #include <cstdio>
+#include <cstdlib>
 
 #include "ApiSystem.h"
 #include "Scripting.h"
@@ -227,11 +228,17 @@ bool MoonlightClient::UpdateMoonlightGames() {
 
     // Write bash script
     if (fileExists("/storage/.config/Moonlight Game Streaming Project/Moonlight.conf") == true) {
+      std::string qpaSet;
+      if (std::getenv("WAYLAND_DISPLAY")) {
+        qpaSet = "QT_QPA_PLATFORM=wayland";
+      } else {
+        qpaSet = "QT_QPA_PLATFORM=eglfs";
+      }
       std::ofstream app_file("/storage/roms/moonlight/" + filename + ".sh");
       app_file << "#!/bin/bash" << std::endl;
       app_file << ". /etc/profile" << std::endl;
       app_file << "jslisten set \"moonlight\"" << std::endl;
-      app_file << "QT_QPA_PLATFORM=wayland moonlight stream " << server_ip_ << " \"" << title << "\" --quit-after" << std::endl;
+      app_file << qpaSet << " moonlight stream " << server_ip_ << " \"" << title << "\" --quit-after" << std::endl;
       app_file.close();
     } else {
       std::ofstream app_file("/storage/roms/moonlight/" + filename + ".sh");
@@ -302,8 +309,14 @@ GuiMoonlight::GuiMoonlight(Window* window)
     std::string server_ip = SystemConf::getInstance()->get("moonlight.host");
 
     char cmd[1024];
+    std::string qpaCmd;
+    if (std::getenv("WAYLAND_DISPLAY")) {
+      qpaCmd = "QT_QPA_PLATFORM=wayland moonlight pair -pin %s %s";
+    } else {
+      qpaCmd = "QT_QPA_PLATFORM=eglfs moonlight pair -pin %s %s";
+      }
     if (isEmbedded() == false) {
-      snprintf(cmd, sizeof cmd, "QT_QPA_PLATFORM=wayland moonlight pair -pin %s %s", pin, server_ip.c_str());
+      snprintf(cmd, sizeof cmd, qpaCmd.c_str(), pin, server_ip.c_str());
     } else {
       snprintf(cmd, sizeof cmd, "moonlight pair -pin %s %s", pin, server_ip.c_str());
     }
